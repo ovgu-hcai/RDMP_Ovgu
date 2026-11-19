@@ -24,6 +24,14 @@ h2 { font-size: 1.65rem; margin: 0 0 1.5rem; }
 p { max-width: 68ch; }
 .brand { color: var(--accent); font-size: .875rem; font-weight: 700; }
 .masthead { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem; }
+.brand-row, .brand-marks, .file-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .65rem; }
+.brand-marks a { display: grid; place-items: center; width: 4.5rem; height: 4.5rem; border: 1px solid var(--line); border-radius: 50%; background: var(--white); }
+.brand-marks img { display: block; width: 3.65rem; height: 3.65rem; object-fit: contain; border-radius: 50%; }
+.brand-marks .university-logo { border-radius: 0; }
+.header-tools { display: grid; justify-items: start; gap: .45rem; }
+.header-tools p { font-size: .875rem; }
+.header-tools p:empty { display: none; }
+.site-footer { display: block; margin-top: 2rem; padding: 1rem 0 0; color: var(--muted); font-size: .875rem; }
 .masthead p { color: var(--muted); margin: 0; }
 .workspace { display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: clamp(1rem, 3vw, 2rem); align-items: start; }
 .sidebar { display: grid; gap: 1rem; min-width: 0; }
@@ -36,7 +44,6 @@ nav [aria-current="step"] { background: var(--selected); color: var(--accent); f
 .example-controls { display: grid; gap: .55rem; margin-top: 1rem; }
 .example-controls p { font-size: .875rem; margin: 0; overflow-wrap: anywhere; }
 .example-controls p:empty { display: none; }
-.example-controls .file-label { margin-top: .45rem; }
 .editor { min-width: 0; }
 #panel { padding: clamp(1.15rem, 4vw, 2.5rem); }
 #panel > label { margin: 0 0 1.2rem; }
@@ -50,7 +57,6 @@ button:disabled { color: #647085; opacity: .65; cursor: default; }
 .primary { background: var(--accent); color: var(--white); border-color: var(--accent); font-weight: 600; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 textarea { display: block; width: 100%; min-height: 4rem; margin: .4rem 0 .9rem; padding: .6rem .75rem; resize: vertical; }
-input[type="file"] { width: 100%; min-width: 0; font-size: .875rem; }
 select { max-width: 100%; }
 fieldset { min-width: 0; margin: 0 0 1.25rem; border: 1px solid var(--line); border-radius: .6rem; padding: 1rem; }
 fieldset select, #panel > label select { display: block; margin: .4rem 0; }
@@ -80,11 +86,24 @@ dd { margin-left: 0; }
 <main>
   <header class="masthead">
     <div>
-      <div class="brand">OVGU · Research Data Management</div>
+      <div class="brand-row">
+        <div class="brand-marks">
+          <a href="https://www.ovgu.de/"><img class="university-logo" src="https://www.cd.ovgu.de/cd_media/CD_OVGU/Basis_Gestaltung%2BAbb_/Logo/OVGU_Logo_0_100_0_60-p-7117.svg" alt="Otto von Guericke University Magdeburg" width="58" height="58"></a>
+          <a href="https://hcai.ovgu.de/"><img src="https://avatars.githubusercontent.com/u/92299061?v=4" alt="Human-Centred Artificial Intelligence at OVGU" width="58" height="58"></a>
+        </div>
+        <span class="brand">OVGU · Research Data Management</span>
+      </div>
       <h1>Research Data Management Plan</h1>
       <p>Draft a plan, track the research lifecycle, and prepare a Data Steward handoff. Use synthetic data in this demo.</p>
     </div>
-    <button id="export" class="primary">Download RDMP draft</button>
+    <div class="header-tools">
+      <div class="file-actions">
+        <button id="import">Upload RDMP JSON</button>
+        <input id="rdmp-file" type="file" accept=".json,application/json" hidden>
+        <button id="export" class="primary">Download RDMP draft</button>
+      </div>
+      <p id="import-status" role="status"></p>
+    </div>
   </header>
   <div class="workspace">
     <aside class="sidebar">
@@ -101,10 +120,6 @@ dd { margin-left: 0; }
           </select>
           <button id="load">Load example</button>
           <p id="hint" class="muted"></p>
-          <label for="rdmp-file" class="file-label">Upload an example (.json)</label>
-          <input id="rdmp-file" type="file" accept=".json,application/json">
-          <button id="import">Open example file</button>
-          <p id="import-status" role="status"></p>
           <p class="muted">Download your draft before closing or reloading the page.</p>
         </div>
       </details>
@@ -117,6 +132,7 @@ dd { margin-left: 0; }
       </footer>
     </div>
   </div>
+  <footer class="site-footer">© 2026 OVGU RDMP Project</footer>
 </main>
 <script>
 const sections=[["Administration", "1.1 Researcher name|1.1 Institutional ID|1.2 Research group|1.3 Project title|1.4 Project description and expected results|1.5 Funding agency|1.5 Grant number|1.6 Project code|1.7 Start date|1.7 Expected end date|1.7 Extended end date|1.8 Version and date|1.8 Last updated|1.8 Subsequent version and date|1.9 Responsible PI|1.9 Daily supervisor(s)|1.10 External institution(s)|1.10 External data management lead(s)"], ["Data collection", "2.1 Sensitive data, permits and licences|2.3 Primary data types, origin and reuse|2.3 Estimated primary data volume|2.4 Secondary data, software and workflows|2.4 Estimated secondary data volume"], ["Data storage", "3.1 Storage location and backup schedule|3.1 Cloud storage and sharing arrangements|3.1 Temporary storage|3.1 Special storage, version control and security|3.2 Archive location, content and retention|3.2 Additional archiving agreements"], ["Data ownership", "4 Ownership, third-party agreements and embargoes|4 Who can access the data and on what terms?"], ["Data documentation", "5.1 Metadata and documentation for reuse|5.2 File formats and naming conventions|5.2 Non-standard formats and software needed"]].map(([title,fields])=>[title,fields.split('|')]);
@@ -401,7 +417,8 @@ function parseExample(text){
  }
  return data;
 }
-by('import').onclick=async ()=>{
+by('import').onclick=()=>by('rdmp-file').click();
+by('rdmp-file').onchange=async ()=>{
  const status=by('import-status');
  const picker=by('rdmp-file');
  const file=picker.files[0];
