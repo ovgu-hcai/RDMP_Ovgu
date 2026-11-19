@@ -1,0 +1,313 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OVGU RDMP Prototype</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f6f5;color:#18332f;font:16px system-ui,sans-serif}main{max-width:1100px;margin:auto;padding:36px 24px}h1{font:clamp(2.1rem,5vw,3.7rem) Georgia,serif;margin:.2em 0}p{line-height:1.5}header{padding:24px 30px;background:#153e37;color:white;border-radius:18px;margin-bottom:22px}header p{max-width:720px}nav{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}button,select{font:inherit;border:1px solid #597971;border-radius:8px;padding:9px 13px;background:white;color:#173e35;cursor:pointer}button[aria-current=step],.primary{background:#205849;color:white}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #af600f;outline-offset:2px}section{background:white;border:1px solid #d7e2de;border-radius:14px;padding:22px;margin-bottom:16px}label{display:block;font-weight:600}textarea{display:block;font:inherit;width:100%;min-height:64px;margin:5px 0 15px;border:1px solid #77958b;border-radius:6px;padding:8px;resize:vertical}fieldset{border:1px solid #a1b6ae;border-radius:9px;margin:1em 0;padding:14px}footer{display:flex;gap:8px;flex-wrap:wrap}.muted{color:#435d55}pre{white-space:pre-wrap;overflow-wrap:anywhere}select{max-width:100%}[hidden]{display:none!important}
+table{width:100%;border-collapse:collapse;table-layout:fixed}caption{text-align:left;font-weight:bold;margin:12px 0}td,th{padding:10px;vertical-align:top;text-align:left;border-bottom:1px solid #d7e2de;overflow-wrap:anywhere}th{background:#e7efec}th:last-child{width:46%}td label,section>label{margin:9px 0}dt{font-weight:bold;margin-top:12px}dd{margin-left:0}summary{cursor:pointer;font-weight:bold}@media(max-width:650px){main{padding:18px 12px}td,th{font-size:.85rem;padding:5px}td select{padding:4px;width:100%}}
+</style>
+<main><header><span>OVGU · Research Data Management</span><h1>Research Data Management Plan</h1><p>Complete the RDMP and track the research lifecycle, service needs and Data Steward handoff. Use synthetic information in this demo.</p></header>
+<section><label for="pilot">Pilot scenario</label><select id="pilot"><option value="">Choose an example</option><option>Informatics</option><option>Humanities</option><option>Engineering</option></select> <button id="load">Load example</button><p id="hint" class="muted"></p><label for="rdmp-file">Upload an RDMP example (.json)</label><input id="rdmp-file" type="file" accept=".json,application/json"> <button id="import">Open example file</button><p id="import-status" role="status"></p><small>Examples replace the current draft. Drafts stay in this page until you close or reload it. Export to keep a copy.</small></section>
+<nav id="steps" aria-label="Plan sections"></nav><section id="panel"></section>
+<footer><button id="back">Back</button><button id="next" class="primary">Next</button><button id="export">Download RDMP draft</button></footer>
+<p class="muted">Sources: GELIFES Standard RDMP Template and FDM@OVGU (1 December 2023), slides 2–5 and 7, covering the DIAMANT 2.0 activity map (slide 2), process (slide 3), competence matrix (slide 4), DCC service components and RDMP trade-offs (slide 5), and OVGU’s Data Steward roadmap (slide 7). Groningen’s filing rules, storage defaults and submission address are institution-specific. Confirm OVGU procedures with the responsible service.</p></main>
+<script>
+const sections=[["Administration", "1.1 Researcher name|1.1 Institutional ID|1.2 Research group|1.3 Project title|1.4 Project description and expected results|1.5 Funding agency|1.5 Grant number|1.6 Project code|1.7 Start date|1.7 Expected end date|1.7 Extended end date|1.8 Version and date|1.8 Last updated|1.8 Subsequent version and date|1.9 Responsible PI|1.9 Daily supervisor(s)|1.10 External institution(s)|1.10 External data management lead(s)"], ["Data collection", "2.1 Sensitive data, permits and licences|2.3 Primary data types, origin and reuse|2.3 Estimated primary data volume|2.4 Secondary data, software and workflows|2.4 Estimated secondary data volume"], ["Data storage", "3.1 Storage location and backup schedule|3.1 Cloud storage and sharing arrangements|3.1 Temporary storage|3.1 Special storage, version control and security|3.2 Archive location, content and retention|3.2 Additional archiving agreements"], ["Data ownership", "4 Ownership, third-party agreements and embargoes|4 Who can access the data and on what terms?"], ["Data documentation", "5.1 Metadata and documentation for reuse|5.2 File formats and naming conventions|5.2 Non-standard formats and software needed"]].map(([title,fields])=>[title,fields.split('|')]);
+const privacy="1 Processing activity|2a Responsible faculty or institute|2b Local process owner|2c Number of people with access|3 Intended use|4 Legal basis and review status|5a Participant categories|5b Estimated participant count|6 Personal data categories|7a Secure storage|7b Retention period|8 External data providers|9 External processors or storage providers|10 Transfers outside the EEA|11 Privacy impact assessment status|12 Automated data sharing|13 Technical and organisational safeguards".split('|');
+const examples={
+ Informatics:['Reproducible model benchmarking','Synthetic benchmark inputs and experiment logs','Python evaluation scripts, configuration files and aggregate metrics','Record the code revision, environment and random seeds.'],
+ Humanities:['Oral histories of industrial change','Synthetic interview transcripts and recordings','Pseudonymised transcripts and coded themes','Keep recordings and the identity key separately under restricted access. Check permission before sharing quotations.'],
+ Engineering:['Vibration monitoring of test equipment','Synthetic sensor traces and calibration logs','Processed signals, calibration scripts and summary plots','Record sensor units, sampling rate, and calibration date.']
+};
+const samplePlans = {
+  "Informatics": {
+    "format": "ovgu-rdmp-example-v1",
+    "discipline": "Informatics",
+    "personal": "No",
+    "values": {
+      "1.2 Research group": "Informatics demonstration group",
+      "1.3 Project title": "Reproducible search benchmark",
+      "1.4 Project description and expected results": "Synthetic demonstration for Informatics. Produce a documented dataset and an analysis package.",
+      "1.8 Version and date": "1.0 \u2014 synthetic example",
+      "2.3 Primary data types, origin and reuse": "Synthetic search queries, relevance labels and run logs",
+      "2.3 Estimated primary data volume": "2 GB",
+      "2.4 Secondary data, software and workflows": "Python scoring scripts, environment lockfile and aggregate scores",
+      "5.2 File formats and naming conventions": "CSV, JSONL and Python. Record the commit, dependency versions and seeds.",
+      "4 Who can access the data and on what terms?": "Public synthetic benchmark and scripts after licence and documentation review.",
+      "status Collect data": "In progress",
+      "evidence Collect data": "Synthetic search queries, relevance labels and run logs",
+      "service Metadata and documentation": "CSV, JSONL and Python. Record the commit, dependency versions and seeds.",
+      "Next action, owner and due date": "Use a reproducibility checklist and rerun a fixed baseline independently.",
+      "Proposed route": "Subject-area Data Steward",
+      "Funding decision": "No application required"
+    }
+  },
+  "Humanities": {
+    "format": "ovgu-rdmp-example-v1",
+    "discipline": "Humanities",
+    "personal": "Yes",
+    "values": {
+      "1.2 Research group": "Humanities demonstration group",
+      "1.3 Project title": "Oral histories of industrial change",
+      "1.4 Project description and expected results": "Synthetic demonstration for Humanities. Produce a documented dataset and an analysis package.",
+      "1.8 Version and date": "1.0 \u2014 synthetic example",
+      "2.3 Primary data types, origin and reuse": "Synthetic interview audio, transcripts and separate identity keys",
+      "2.3 Estimated primary data volume": "12 GB",
+      "2.4 Secondary data, software and workflows": "Pseudonymised transcripts and thematic codebook",
+      "5.2 File formats and naming conventions": "WAV, UTF-8 text and CSV. Record transcript conventions and redaction decisions.",
+      "4 Who can access the data and on what terms?": "Restrict recordings and identity keys. Review consent before sharing redacted excerpts.",
+      "status Collect data": "In progress",
+      "evidence Collect data": "Synthetic interview audio, transcripts and separate identity keys",
+      "service Metadata and documentation": "WAV, UTF-8 text and CSV. Record transcript conventions and redaction decisions.",
+      "Next action, owner and due date": "Ask the Data Steward and privacy contact to review the proposed access and retention plan.",
+      "Proposed route": "Subject-area Data Steward",
+      "Funding decision": "No application required",
+      "privacy 1 Processing activity": "Record, transcribe and code interviews in the modeled study.",
+      "privacy 5b Estimated participant count": "12 in the modeled study",
+      "privacy 6 Personal data categories": "Voice and transcript text in the modeled study. Demo inputs are synthetic.",
+      "privacy 13 Technical and organisational safeguards": "Limit access, encrypt recordings and store the identity key separately.",
+      "privacy 4 Legal basis and review status": "To be reviewed by the appropriate institutional contact.",
+      "3.1 Special storage, version control and security": "Keep source recordings and identity keys in separate restricted locations."
+    }
+  },
+  "Engineering": {
+    "format": "ovgu-rdmp-example-v1",
+    "discipline": "Engineering",
+    "personal": "No",
+    "values": {
+      "1.2 Research group": "Engineering demonstration group",
+      "1.3 Project title": "Vibration monitoring of test equipment",
+      "1.4 Project description and expected results": "Synthetic demonstration for Engineering. Produce a documented dataset and an analysis package.",
+      "1.8 Version and date": "1.0 \u2014 synthetic example",
+      "2.3 Primary data types, origin and reuse": "Synthetic accelerometer traces and calibration logs",
+      "2.3 Estimated primary data volume": "240 GB",
+      "2.4 Secondary data, software and workflows": "Filtered signals, frequency spectra and calibration scripts",
+      "5.2 File formats and naming conventions": "CSV for metadata and HDF5 for signals. Record units, sampling rate and calibration date.",
+      "4 Who can access the data and on what terms?": "Share derived spectra after reviewing any equipment-related restrictions.",
+      "status Collect data": "In progress",
+      "evidence Collect data": "Synthetic accelerometer traces and calibration logs",
+      "service Metadata and documentation": "CSV for metadata and HDF5 for signals. Record units, sampling rate and calibration date.",
+      "Next action, owner and due date": "Ask URZ to confirm capacity, backup and transfer options for large signal files.",
+      "Proposed route": "University Computing Centre (URZ)",
+      "Funding decision": "No application required"
+    }
+  }
+};
+let step=0, values={}, personal='Unknown', discipline='';
+const by=id=>document.getElementById(id);
+function field(key,label){
+ const wrapper=document.createElement('label');
+ wrapper.textContent=label;
+ const input=document.createElement('textarea');
+ input.value=values[key]||'';
+ input.addEventListener('input',()=>{values[key]=input.value;});
+ wrapper.append(input);
+ return wrapper;
+}
+
+const phases = [
+ ['Planning',[
+ ['Information search','Researcher','Record existing data, literature and reusable sources.'],
+ ['Select funding framework','Strategic governance K*1; Researcher K1; Research management K2; RDM governance K*2; Finance K*3','Record funder requirements and applicable funding route.'],
+ ['Select methods','Researcher K3; Methods advice K4','Record the chosen research and data collection methods.'],
+ ['Select RDM policies','Researcher K5; Research management K6','Record relevant institutional, disciplinary and funder policies.'],
+ ['Plan RDM resources','Researcher K7; Research management K8; Contract management K9','Estimate staff time, costs, infrastructure and external commitments.'],
+ ['Identify legal conditions','Researcher K10; Legal advice K11','Record approvals, rights, contracts and restrictions to review.']]],
+ ['Collection, analysis and evaluation',[
+ ['Collect data','Researcher K12; Methods advice K13; IT K*4','Collection. Record sources, collection methods and provenance.'],
+ ['Manage data','Researcher K14; Methods advice K15; Legal advice K16; Data curation K17','Collection and analysis. Record access, versions, backup and documentation.'],
+ ['Evaluate data','Researcher K18; Methods advice K19','Analysis. Record quality checks, exclusions and validation.'],
+ ['Apply data','Researcher K20; Methods advice K21; Legal advice K22','Collection and analysis. Record processing, interpretation and permitted uses.']]],
+ ['Publication',[
+ ['Choose publication venue','Researcher K23; Methods advice K24; Research management K25; Publication service K26','Record the venue or repository and its requirements.'],
+ ['Prepare publication package','Researcher K27; Data curation K28; IT K*4; Publication service K29','Prepare documentation, formats, licence and public or controlled access.'],
+ ['Hand over for publication','Researcher K30; Publication service K31; Contract management K32','Record deposit date, identifier or evidence and any restrictions.']]],
+ ['Archiving',[
+ ['Choose archive','Researcher K33; Methods advice K34; Research management K35; Archiving service K36','Record the archive, selection criteria and retention.'],
+ ['Prepare archival package','Researcher K37; Data curation K38; IT K*4; Archiving service K39','Record the inventory, metadata, format conversion and preservation checks.'],
+ ['Hand over to archive','Researcher K40; Archiving service K41; Contract management K42','Record transfer, access conditions and acknowledgement.']]]
+];
+const services = [
+ ['Leadership support','Identify an experienced researcher or manager to sponsor and review the plan.'],
+ ['Tools','Identify tools, tool owners and support needs.'],
+ ['Costs and funding','Estimate service and infrastructure costs and identify who will cover them.'],
+ ['Metadata and documentation','Record standards, documentation and curation support.'],
+ ['Research environments and systems','Identify approved environments and integrations to confirm.'],
+ ['Storage, backup and access','Record capacity, recovery and permissions needs for URZ review.'],
+ ['Archiving, preservation and sharing','Record deposit, retention and reuse requirements for review with the library or archive.'],
+ ['Research policies and legal assurance','Record policies and questions for the appropriate legal or privacy contact.'],
+ ['Training, guidance and instructions','Record training and guidance needs for FDM coordination or the Graduate Academy.']
+];
+const handoffFields = [
+ 'Subject area and Data Steward contact to confirm','Current RDM activities, gaps and needs','Advice requested and urgency',
+ 'Proposed central service and reason','Next action, owner and due date','Training or proactive outreach needs',
+ 'Reusable practice or guideline to share','Follow-up, outcome and improvements'
+];
+function paragraph(text){
+ const p=document.createElement('p');p.textContent=text;return p;
+}
+function choice(key,label,options,update){
+ const entry=document.createElement('label');entry.textContent=label+' ';
+ const select=document.createElement('select');
+ options.forEach(option=>select.add(new Option(option,option)));
+ select.value=values[key]||options[0];
+ select.onchange=()=>{values[key]=select.value;if(update) render(false);};
+ entry.append(select);return entry;
+}
+const fundingOptions=['Undecided','No application required','Preparing application','Submitted','Approved','Declined'];
+function renderLifecycle(panel){
+ panel.append(paragraph('Start with the research idea, develop the research question and draft the concept. The researcher participates in every activity. Collection and analysis can run in parallel. Once the research question is answered, publication and archiving each follow their own venue selection, preparation and handover. Slide 3 shows hardware and software support across several activities. The codes in the table follow the assignments in the slide 4 matrix.'),
+ choice('Funding decision','Funding decision',fundingOptions,true),
+ paragraph(fundingMessage()),
+ field('Research milestone','Research milestone (research concept, research question answered, results published and archived)'));
+ const table=document.createElement('table');
+ table.innerHTML='<caption>DIAMANT activities and competence assignments</caption><thead><tr><th scope="col">Activity</th><th scope="col">Roles and competence codes</th><th scope="col">Status, owner and evidence</th></tr></thead>';
+ for(const [phase,activities] of phases){
+  const body=table.createTBody();
+  const heading=document.createElement('th');heading.colSpan=3;heading.scope='rowgroup';heading.textContent=phase;body.insertRow().append(heading);
+  for(const [activity,roles,description] of activities){
+   const row=body.insertRow();
+   row.insertCell().textContent=activity;
+   row.insertCell().textContent=roles;
+   row.insertCell().append(choice('status '+activity,'Status for '+activity,['Not started','In progress','Done','Not applicable']),field('evidence '+activity,description+' Record owner and evidence.'));
+  }
+ }
+ panel.append(table);
+}
+function fundingMessage(){
+ const decision=values['Funding decision'];
+ if(decision==='Declined') return 'Return to planning and revise the research concept, funding route or resources.';
+ if(decision==='Approved'||decision==='No application required') return 'Proceed with data collection and analysis under the confirmed conditions.';
+ return 'If funding is required, prepare and submit the application with research management and record the decision.';
+}
+function renderServices(panel){
+ panel.append(paragraph('Potential benefits include access to funding calls, easier reporting and reuse, standalone data publications that others can cite, lower data-loss risk, and a better chance that files remain readable over the long term and continuity during staff changes. Budget time and infrastructure to write and maintain the RDMP, assign staff to monitor it and check whether formats need conversion.'));
+ for(const [service,description] of services) panel.append(field('service '+service,service+' — '+description));
+ panel.append(field('RDMP review schedule','RDMP review schedule, responsible person and resources'));
+}
+function renderHandoff(panel){
+ panel.append(paragraph('The subject-area Data Steward is the first contact for discipline-specific advice. Central FDM coordination connects researchers and stewards to central services. Consider URZ for technical infrastructure, the University Library (UB) for publication and preservation advice, and the Graduate Academy (GA) for training. Confirm the routing before using it for a real project.'),
+ choice('Proposed route','Proposed referral',['Subject-area Data Steward','Central FDM coordination','University Computing Centre (URZ)','University Library (UB)','Graduate Academy (GA)','Legal or privacy advice']));
+ for(const key of handoffFields) panel.append(field(key,key));
+ const details=document.createElement('details');
+ details.innerHTML='<summary>OVGU cooperative RDM roadmap as presented in December 2023</summary><dl><dt>2022 · Establish the network</dt><dd>Advertise and fill the coordinator role, set up the central service and online portal, agree support with URZ, UB and GA, identify around five initial Data Stewards, agree goals and needs, and initiate central support.</dd><dt>2023 · Develop services and extend coverage</dt><dd>Inventory RDM activity and needs, expand the network to other research areas, make stewards visible as local contacts, and develop good practices, guidelines and procedures.</dd><dt>2024 onward · Develop training and strategy</dt><dd>Move from individual advice to proactive training and outreach, broker technical solutions, seek external funding, develop a university-wide RDM strategy, improve services continuously, and connect with national and international initiatives.</dd></dl><p>The roadmap assigns support decisions to the CIO body or Rectorate and envisages centrally co-funded Data Steward positions. This is the historical roadmap as shown in the slides.</p>';
+ panel.append(details);
+}
+function appendWorkflow(lines){
+ const value=key=>values[key]?.trim()||'[to complete]';
+ lines.push('','DIAMANT lifecycle and responsibilities','Funding decision: '+(values['Funding decision']||fundingOptions[0]),fundingMessage(),'Research milestone: '+value('Research milestone'));
+ for(const [phase,activities] of phases){
+  lines.push('',phase);
+  for(const [activity,roles] of activities) lines.push(activity+' — '+(values['status '+activity]||'Not started')+' — '+roles+' — '+value('evidence '+activity));
+ }
+ lines.push('','RDM service requirements');
+ for(const [service] of services) lines.push(service+': '+value('service '+service));
+ lines.push('RDMP review schedule: '+value('RDMP review schedule'),'','OVGU cooperative handoff — draft only','Proposed referral: '+(values['Proposed route']||'Subject-area Data Steward'));
+ for(const key of handoffFields) lines.push(key+': '+value(key));
+}
+
+function report(){
+ const lines=['OVGU RDMP · working draft','Source: GELIFES Standard RDMP Template','Pilot: '+(discipline||'Unspecified')];
+ sections.forEach(([title,fields],i)=>{
+  lines.push('',title);
+  fields.forEach(f=>lines.push(f+': '+(values[f]?.trim()||'[to complete / confirm applicability]')));
+  if(i===1){
+   lines.push('2.2 Human participant data: '+personal);
+   if(personal==='Yes') privacy.forEach(f=>lines.push('  '+f+': '+(values['privacy '+f]?.trim()||'[to complete]')));
+  }
+ });
+ appendWorkflow(lines);
+ lines.push('','Review and handoff',review());
+ return lines.join('\n');
+}
+function review(){
+ if(personal==='Yes') return 'Proposed handoff: faculty Data Steward and applicable OVGU privacy contact. Confirm access, retention, and relevant review requirements before use with real data.';
+ if(personal==='Unknown') return 'Confirm whether human participant data are processed. Ask the faculty Data Steward if unclear.';
+ return 'Proposed handoff: faculty Data Steward for documentation and archiving. Consult central FDM coordination or URZ to confirm storage and backup options.';
+}
+function render(focus){
+ const names=[...sections.map(s=>s[0]),'Research lifecycle','RDM services','OVGU handoff','Review'];
+ by('steps').replaceChildren(...names.map((name,i)=>{
+  const button=document.createElement('button');button.textContent=name;
+  if(i===step)button.setAttribute('aria-current','step');
+  button.onclick=()=>{step=i;render(true);};return button;
+ }));
+ const panel=by('panel');panel.replaceChildren();
+ const h=document.createElement('h2');h.textContent=names[step];h.tabIndex=-1;panel.append(h);
+ if(step===8){const draft=document.createElement('pre');draft.textContent=report();panel.append(draft);}
+ else if(step===5)renderLifecycle(panel);
+ else if(step===6)renderServices(panel);
+ else if(step===7)renderHandoff(panel);
+ else sections[step][1].forEach(f=>{
+  if(f.startsWith('2.3 Primary')){
+   const group=document.createElement('fieldset');
+   const legend=document.createElement('legend');legend.textContent='2.2 Human participant data';group.append(legend);
+   const label=document.createElement('label');label.textContent='Does the project process data from human participants? ';
+   const selector=document.createElement('select');
+   ['Unknown','Yes','No'].forEach(v=>selector.add(new Option(v,v)));
+   selector.value=personal;label.append(selector);group.append(label);
+   const questions=document.createElement('div');questions.append(...privacy.map(q=>field('privacy '+q,q)));group.append(questions);
+   questions.hidden=personal!=='Yes';
+   selector.onchange=()=>{personal=selector.value;questions.hidden=personal!=='Yes';};panel.append(group);
+  }
+  panel.append(field(f,f));
+ });
+ by('back').disabled=step===0;by('next').disabled=step===8;
+ if(focus)h.focus();
+}
+by('load').onclick=()=>{
+ const selected=by('pilot').value;
+ if(!selected){by('hint').textContent='Choose a pilot scenario first.';return;}
+ if(Object.keys(values).length && !confirm('Replace the current draft with this example?')) return;
+ const sample=parseExample(JSON.stringify(samplePlans[selected]));
+ ({values,personal,discipline}=sample);
+ by('hint').textContent=examples[selected][3];step=0;render(true);
+};
+by('back').onclick=()=>{step--;render(true);};
+by('next').onclick=()=>{step++;render(true);};
+by('export').onclick=()=>{
+ const url=URL.createObjectURL(new Blob([report()],{type:'text/plain;charset=utf-8'}));
+ const link=document.createElement('a');link.href=url;link.download='OVGU_RDMP_Draft.txt';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
+
+const importKeys = new Set([
+ ...sections.flatMap(([,fields])=>fields), ...privacy.map(f=>'privacy '+f),
+ ...phases.flatMap(([,activities])=>activities.flatMap(([name])=>['status '+name,'evidence '+name])),
+ ...services.map(([name])=>'service '+name), ...handoffFields,
+ 'Funding decision','Research milestone','RDMP review schedule','Proposed route'
+]);
+function parseExample(text){
+ const data=JSON.parse(text);
+ if(!data || data.format!=='ovgu-rdmp-example-v1' ||
+    !Object.hasOwn(examples,data.discipline) ||
+    !['Yes','No','Unknown'].includes(data.personal) ||
+    !data.values || Object.getPrototypeOf(data.values)!==Object.prototype ||
+    !Object.entries(data.values).every(([key,value])=>importKeys.has(key)&&typeof value==='string') ||
+    !data.values['1.3 Project title']?.trim()){
+  throw new Error('Choose a valid OVGU RDMP example JSON file.');
+ }
+ return data;
+}
+by('import').onclick=async ()=>{
+ const status=by('import-status');
+ const picker=by('rdmp-file');
+ const file=picker.files[0];
+ if(!file){status.textContent='Choose an example file first.';return;}
+ if(file.size>256000){status.textContent='Choose a JSON example smaller than 256 KB.';return;}
+ const button=by('import');
+ button.disabled=true;
+ try{
+  const data=parseExample(await file.text());
+  if(picker.files[0]!==file) return;
+  if(Object.keys(values).length && !confirm('Replace the current draft with this example?')) return;
+  ({values,personal,discipline}=data);
+  by('pilot').value=discipline;
+  by('hint').textContent=examples[discipline][3];
+  step=0;
+  render(true);
+  status.textContent='Opened '+values['1.3 Project title']+'. Select a section or Review to explore the imported plan.';
+ }catch(error){
+  status.textContent=error instanceof SyntaxError?'The file could not be read as JSON.':error.message;
+ }finally{button.disabled=false;}
+};
+
+render(false);
+</script>
+</html>
