@@ -24,11 +24,12 @@ h2 { font-size: 1.65rem; margin: 0 0 1.5rem; }
 p { max-width: 68ch; }
 .brand { color: var(--accent); font-size: .875rem; font-weight: 700; }
 .masthead { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem; }
-.brand-row, .brand-marks, .file-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .65rem; }
+.brand-marks, .file-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .65rem; }
 .brand-marks a { display: grid; place-items: center; width: 4.5rem; height: 4.5rem; border: 1px solid var(--line); border-radius: 50%; background: var(--white); }
 .brand-marks img { display: block; width: 3.65rem; height: 3.65rem; object-fit: contain; border-radius: 50%; }
 .brand-marks .university-logo { border-radius: 0; }
-.header-tools { display: grid; justify-items: start; gap: .45rem; }
+.header-tools { display: grid; justify-items: end; gap: .65rem; margin-inline-start: auto; }
+.file-actions { justify-content: flex-end; }
 .header-tools p { font-size: .875rem; }
 .header-tools p:empty { display: none; }
 .site-footer { display: block; margin-top: 2rem; padding: 1rem 0 0; color: var(--muted); font-size: .875rem; }
@@ -86,17 +87,15 @@ dd { margin-left: 0; }
 <main>
   <header class="masthead">
     <div>
-      <div class="brand-row">
-        <div class="brand-marks">
-          <a href="https://www.ovgu.de/"><img class="university-logo" src="https://www.cd.ovgu.de/cd_media/CD_OVGU/Basis_Gestaltung%2BAbb_/Logo/OVGU_Logo_0_100_0_60-p-7117.svg" alt="Otto von Guericke University Magdeburg" width="58" height="58"></a>
-          <a href="https://hcai.ovgu.de/"><img src="https://avatars.githubusercontent.com/u/92299061?v=4" alt="Human-Centred Artificial Intelligence at OVGU" width="58" height="58"></a>
-        </div>
-        <span class="brand">OVGU · Research Data Management</span>
-      </div>
+      <span class="brand">OVGU · Research Data Management</span>
       <h1>Research Data Management Plan</h1>
       <p>Draft a plan, track the research lifecycle, and prepare a Data Steward handoff. Use synthetic data in this demo.</p>
     </div>
     <div class="header-tools">
+        <div class="brand-marks">
+          <a href="https://www.ovgu.de/"><img class="university-logo" src="https://www.cd.ovgu.de/cd_media/CD_OVGU/Basis_Gestaltung%2BAbb_/Logo/OVGU_Logo_0_100_0_60-p-7117.svg" alt="Otto von Guericke University Magdeburg" width="58" height="58"></a>
+          <a href="https://hcai.ovgu.de/"><img src="https://avatars.githubusercontent.com/u/92299061?v=4" alt="Human-Centred Artificial Intelligence at OVGU" width="58" height="58"></a>
+        </div>
       <div class="file-actions">
         <button id="import">Upload RDMP JSON</button>
         <input id="rdmp-file" type="file" accept=".json,application/json" hidden>
